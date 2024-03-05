@@ -125,9 +125,7 @@ exports.getOutput = async (req, res) => {
       const data = outputData.predictions;
       console.log(data);
       const finalData = data.map((data, index) => {
-        return {
-          [index + 1]: data,
-        };
+        return [index + 1, data];
       });
       console.log(finalData);
       res.status(200).json({
