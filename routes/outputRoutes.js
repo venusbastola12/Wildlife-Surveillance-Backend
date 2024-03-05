@@ -4,7 +4,7 @@ const multer = require("multer");
 
 const outputRouter = express.Router();
 
-const storage = multer.diskStorage({
+const storage1 = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "public/videos");
   },
@@ -13,9 +13,26 @@ const storage = multer.diskStorage({
     cb(null, file.originalname);
   },
 });
+const storage2 = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "public/audio");
+  },
+  filename: function (req, file, cb) {
+    cb(null, file.originalname);
+  },
+});
 
-const upload = multer({ storage: storage });
+const upload1 = multer({ storage: storage1 });
+const upload2 = multer({ storage: storage2 });
 //const upload = multer(); //it is the middleware to access the multipart/formdata data
-outputRouter.post("/", upload.single("video"), outputController.getOutput);
-
+outputRouter.post(
+  "/video",
+  upload1.single("video"),
+  outputController.getOutput
+);
+// outputRouter.post(
+//   "/audio",
+//   upload2.single("audio"),
+//   outputController.getAudioOutput
+// );
 module.exports = outputRouter;

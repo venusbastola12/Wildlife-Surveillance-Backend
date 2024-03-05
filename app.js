@@ -11,6 +11,7 @@ app.use(cors());
 app.use(express.json()); //body parser middleware..
 // app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/output", outputRouter);
+
 app.use("/addImage", ImageRouter);
 
 app.listen(process.env.PORT, () => {

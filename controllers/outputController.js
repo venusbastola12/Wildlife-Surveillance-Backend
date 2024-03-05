@@ -2,26 +2,31 @@ const fs = require("fs");
 const path = require("path");
 const ffmpeg = require("fluent-ffmpeg");
 const ffmpegPath = require("@ffmpeg-installer/ffmpeg").path;
+//const ffprobePath = require("@ffprobe-installer/ffprobe").path;
 
 ffmpeg.setFfmpegPath(ffmpegPath);
+//ffmpeg.setFfprobePath(ffprobePath);
 
-async function extractFramesFromBlob(videoPath, targetHeight, targetWidth) {
+async function extractFramesFromBlob(
+  videoPath,
+
+  targetHeight,
+  targetWidth
+) {
   return new Promise((resolve, reject) => {
     const outputPath = "public/frames/frame-%d.jpg"; // Path to save extracted frames
+    const audioPath = "public/audio/audio.mp3"; //path to save extracted audio.
     const fps = 1;
-    //const frameInterval = Math.round(1 / fps);
 
     ffmpeg(videoPath)
       .outputOptions(`-vf fps=${fps},scale=${targetWidth}:${targetHeight}`)
+
       .output(outputPath)
+
       .on("end", () => {
         console.log("Frames extracted successfully");
 
         resolve(outputPath);
-        fs.unlink(videoPath, function (err) {
-          if (err) throw err;
-          console.log("video deleted");
-        });
       })
       .on("error", (err) => {
         console.error("Error extracting frames:", err);
@@ -30,42 +35,36 @@ async function extractFramesFromBlob(videoPath, targetHeight, targetWidth) {
       .run();
   });
 }
-// async function createBlob(filePath) {
-//   const fileBuffer = fs.readFileSync(filePath);
+async function extractAudioFromVideo(VideoPath) {
+  return new Promise((resolve, reject) => {
+    const audioPath = `public/audio/audio.mp3`;
 
-//   const blob = new Blob([fileBuffer], { type: "image/jpeg" });
-//   return blob;
-// }
-
-// async function getFramesFromDirectory(directoryPath) {
-//   let framesArray = [];
-//   fs.readdir(directoryPath, (err, files) => {
-//     if (err) {
-//       console.error("Error reading directory:", err);
-//       return;
-//     }
-//     files.forEach((file) => {
-//       // console.log(file);
-//       const fullPath = path.join(directoryPath, file);
-//       // console.log(fullPath);
-//       framesArray.push(fullPath);
-//     });
-//     //console.log(framesArray);
-//   });
-//   return framesArray;
-
-// }
+    const extractAudio = ffmpeg();
+    extractAudio.input(VideoPath);
+    extractAudio.outputFormat("mp3");
+    extractAudio.output(audioPath);
+    extractAudio
+      .on("end", () => {
+        console.log("audio extracted successfully");
+        resolve(audioPath);
+        fs.unlink(VideoPath, function (err) {
+          if (err) throw err;
+          console.log("video deleted");
+        });
+      })
+      .on("error", (err) => {
+        console.error("error occurred:", err);
+        reject(err);
+      })
+      .run();
+  });
+}
 
 exports.getOutput = async (req, res) => {
-  // const blob = new Blob(["hello world"], { type: "text/plain" });
-  // var blobUrl = URL.createObjectURL(blob);
-
   console.log(req.file);
   var video = new Blob([req.file]);
   var videoUrl = URL.createObjectURL(video); //here we create the url pointing to the videoblob that we get.
-  // const response = await fetch(videoUrl);
-  // const videoBlob = await response.blob();
-  // console.log(videoBlob);
+
   const videoPath = req.file.path;
 
   //const outputPath = "/public/frames";
@@ -74,11 +73,17 @@ exports.getOutput = async (req, res) => {
   const targetWidth = 250;
 
   //extract frames and save it locally
+
   const extractedFrames = await extractFramesFromBlob(
     videoPath,
+
     targetHeight,
     targetWidth
   );
+  const extractedAudio = await extractAudioFromVideo(videoPath);
+  console.log(extractedFrames);
+  console.log(extractedAudio);
+
   const directoryPath = "public/frames"; //setting directory path from where we have to pull the images.
 
   fs.readdir(directoryPath, async (err, files) => {
@@ -90,28 +95,12 @@ exports.getOutput = async (req, res) => {
     files.forEach((file) => {
       // console.log(file);
       const fullPath = path.join(directoryPath, file);
-      // console.log(fullPath);
+      console.log(fullPath);
       framesArray.push(fullPath);
     });
 
-    //const frameBlob = new Blob(framesArray,{type:});
-    // const formData = new FormData();
-    // const frameBlobs = await Promise.all(
-    //   framesArray.map((filePath) => {
-    //     createBlob(filePath);
-    //   })
-    // );
-    // async function createBlob(filePath) {
-    //   const fileBuffer = fs.readFileSync(filePath);
-
-    //   const blob = new Blob([fileBuffer], { type: "image/jpeg" });
-    //   return blob;
-    // }
     console.log(framesArray);
-    // const frameBlobs = framesArray.map((path) => {
-    //   console.log(path);
-    //   new Blob([fs.readFileSync(path)], { type: "image/jpeg" });
-    // });
+
     let frameBlobs = [];
     framesArray.forEach((path) => {
       const fileBuffer = fs.readFileSync(path);
@@ -125,7 +114,34 @@ exports.getOutput = async (req, res) => {
     });
     console.log(formData);
     try {
-      await fetch("http://127.0.0.1:5000", {
+      const response = await fetch("http://127.0.0.1:5000/vision", {
+        method: "POST",
+        //   headers: { "Content-Type": "multipart/form-data" },
+        body: formData,
+      });
+      console.log(await response.json());
+    } catch (err) {
+      console.log(err);
+    }
+  });
+  const audioDirectory = "public/audio";
+  fs.readdir(audioDirectory, async (err, files) => {
+    if (err) {
+      console.error("error reading directories", err);
+      return;
+    }
+    console.log(files[0]);
+    const fullPath = path.join(audioDirectory, files[0]);
+    const fileBuffer = fs.readFileSync(fullPath);
+    //console.log(fileBuffer);
+    const audioBlob = new Blob([fileBuffer], { type: files[0].type });
+    console.log("this is audio blob", audioBlob);
+
+    const formData = new FormData();
+    formData.append("audio", audioBlob, "audio.mp3");
+    console.log(formData);
+    try {
+      const response = await fetch("http://127.0.0.1:5000/audio", {
         method: "POST",
         //   headers: { "Content-Type": "multipart/form-data" },
         body: formData,
@@ -134,12 +150,7 @@ exports.getOutput = async (req, res) => {
       console.log(err);
     }
   });
-  //console.log(framesArray);
 
-  //console.log(extractedFrames);
-  //const framesForFlask = [];
-
-  // console.log(extractedFrames);
   console.log(videoUrl);
 
   console.log(video);
