@@ -15,7 +15,7 @@ async function extractFramesFromBlob(
 ) {
   return new Promise((resolve, reject) => {
     const outputPath = "public/frames/frame-%d.jpg"; // Path to save extracted frames
-    const audioPath = "public/audio/audio.mp3"; //path to save extracted audio.
+    //const audioPath = "public/audio/audio.mp3"; //path to save extracted audio.
     const fps = 1;
 
     ffmpeg(videoPath)
@@ -119,7 +119,23 @@ exports.getOutput = async (req, res) => {
         //   headers: { "Content-Type": "multipart/form-data" },
         body: formData,
       });
-      console.log(await response.json());
+      const outputData = await response.json();
+
+      console.log(outputData);
+      const data = outputData.predictions;
+      console.log(data);
+      const finalData = data.map((data, index) => {
+        return {
+          [index + 1]: data,
+        };
+      });
+      console.log(finalData);
+      res.status(200).json({
+        status: "success",
+        data: {
+          finalData,
+        },
+      });
     } catch (err) {
       console.log(err);
     }
@@ -146,19 +162,9 @@ exports.getOutput = async (req, res) => {
         //   headers: { "Content-Type": "multipart/form-data" },
         body: formData,
       });
+      console.log(await response.json());
     } catch (err) {
       console.log(err);
     }
-  });
-
-  console.log(videoUrl);
-
-  console.log(video);
-  //console.log(obtainedString);
-  res.status(200).json({
-    status: "success",
-    data: {
-      extractedFrames,
-    },
   });
 };
