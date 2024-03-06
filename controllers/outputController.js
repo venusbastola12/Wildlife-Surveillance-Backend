@@ -131,9 +131,9 @@ exports.getOutput = async (req, res) => {
       //   return [index + 1, data];
       // });
       let finalData = [];
-      for (let i = 1; i < data.length; i++) {
+      for (let i = 1; i <= data.length; i++) {
         if (data[i] != "null") {
-          finalData.push(data[i]);
+          finalData.push([i, data[i - 1]]);
         }
       }
       console.log(finalData);
