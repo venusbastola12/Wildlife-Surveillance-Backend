@@ -124,9 +124,18 @@ exports.getOutput = async (req, res) => {
       console.log(outputData);
       const data = outputData.predictions;
       console.log(data);
-      const finalData = data.map((data, index) => {
-        return [index + 1, data];
-      });
+      // const finalData = data.map((data, index) => {
+      //   // if (data != "null") {
+      //   //   return [index + 1, data];
+      //   // }
+      //   return [index + 1, data];
+      // });
+      let finalData = [];
+      for (let i = 1; i < data.length; i++) {
+        if (data[i] != "null") {
+          finalData.push(data[i]);
+        }
+      }
       console.log(finalData);
       res.status(200).json({
         status: "success",
