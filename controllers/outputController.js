@@ -1,4 +1,5 @@
 const fs = require("fs");
+const { readdir } = require("node:fs/promises");
 const path = require("path");
 const ffmpeg = require("fluent-ffmpeg");
 const ffmpegPath = require("@ffmpeg-installer/ffmpeg").path;
@@ -86,20 +87,17 @@ exports.getOutput = async (req, res) => {
 
   const directoryPath = "public/frames"; //setting directory path from where we have to pull the images.
 
-  fs.readdir(directoryPath, async (err, files) => {
+  let finalData = [];
+  let finalAudio = [];
+  try {
+    const files = await readdir(directoryPath);
     let framesArray = [];
-    if (err) {
-      console.error("Error reading directory:", err);
-      return;
-    }
     files.forEach((file) => {
       // console.log(file);
       const fullPath = path.join(directoryPath, file);
       console.log(fullPath);
       framesArray.push(fullPath);
     });
-
-    console.log(framesArray);
 
     let frameBlobs = [];
     framesArray.forEach((path) => {
@@ -119,40 +117,28 @@ exports.getOutput = async (req, res) => {
         //   headers: { "Content-Type": "multipart/form-data" },
         body: formData,
       });
+
       const outputData = await response.json();
 
       console.log(outputData);
       const data = outputData.predictions;
       console.log(data);
-      // const finalData = data.map((data, index) => {
-      //   // if (data != "null") {
-      //   //   return [index + 1, data];
-      //   // }
-      //   return [index + 1, data];
-      // });
-      let finalData = [];
-      for (let i = 1; i <= data.length; i++) {
+
+      for (let i = 0; i < data.length; i++) {
         if (data[i] != "null") {
-          finalData.push([i, data[i - 1]]);
+          finalData.push([i + 1, data[i]]);
         }
       }
-      console.log(finalData);
-      res.status(200).json({
-        status: "success",
-        data: {
-          finalData,
-        },
-      });
     } catch (err) {
       console.log(err);
     }
-  });
+  } catch (err) {
+    console.log(err);
+  }
+  console.log(finalData);
   const audioDirectory = "public/audio";
-  fs.readdir(audioDirectory, async (err, files) => {
-    if (err) {
-      console.error("error reading directories", err);
-      return;
-    }
+  try {
+    const files = await readdir(audioDirectory);
     console.log(files[0]);
     const fullPath = path.join(audioDirectory, files[0]);
     const fileBuffer = fs.readFileSync(fullPath);
@@ -169,9 +155,27 @@ exports.getOutput = async (req, res) => {
         //   headers: { "Content-Type": "multipart/form-data" },
         body: formData,
       });
-      console.log(await response.json());
+      const output = await response.json();
+      // const data2 = output.data;
+      // for (let i = 0; i < data2.lenght; i++) {
+      //   if (data2[i] != "null") {
+      //     finalAudio.push(i + 1, data2[i]);
+      //   }
+      // }
+      console.log(output);
     } catch (err) {
       console.log(err);
     }
+  } catch (err) {
+    console.log(err);
+  }
+  res.status(200).json({
+    status: "success",
+    data1: {
+      finalData,
+    },
+    data2: {
+      finalAudio,
+    },
   });
 };
